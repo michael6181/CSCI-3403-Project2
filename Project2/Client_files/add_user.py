@@ -5,13 +5,17 @@
     Authors: Matt Niemiec and Abigail Fernandes
     The solution contains the same number of lines (plus imports)
 """
+import random
+import string
+
 
 user = input("Enter a username: ")
 password = input("Enter a password: ")
 
 # TODO: Create a salt and hash the password
-# salt = ???
-# hashed_password = ???
+random_chars = string.ascii_letters + string.digits
+salt = ''.join(random.choice(random_chars) for x in range(16))
+hashed_password = password + salt
 
 try:
     reading = open("passfile.txt", 'r')
