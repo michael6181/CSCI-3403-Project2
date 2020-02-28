@@ -9,7 +9,9 @@
 
     Put your team members' names:
 
-
+    Michael Rogers
+    Hans Hofmann
+    John Palmer
 
 """
 
