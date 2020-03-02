@@ -131,6 +131,22 @@ def main():
 
         decrypted_msg = decrypt_message(rec_msg, key)
         print(decrypted_msg)
+        
+        if (decrypted_msg[:5] == "Valid"):
+            file_to_access = input("Name of file to read/write: ")
+            read_or_write = input("Would you like to 'r' read or 'w' write? ")
+            file_and_action = file_to_access + " " + read_or_write
+            
+            #Encrypt message and send to server (file to access and whether to (r)ead or (w)rite)
+            enc_msg = encrypt_message(file_and_action, key)
+            send_message(sock, enc_msg)
+
+            #Receive and decrypt response from server (if I can or can't read or write)
+            rec_msg = receive_message(sock)
+            rec_msg = rec_msg.decode()
+
+            decrypted_msg = decrypt_message(rec_msg, key)
+            print(decrypted_msg)
 
     finally:
         print('closing socket')
