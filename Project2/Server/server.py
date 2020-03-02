@@ -28,6 +28,65 @@ from Crypto.Hash import SHA256
 host = "localhost"
 port = 10001
 
+class Mac_item:
+    def __init__(self, user, filename):
+        #self.real indicates whether the provider user (or object name) exists
+        #self.name is name of user or object
+        #self.classificatinos is list of classifications
+        #self.security_level = TS S C or U
+        #self.numeric_security_level is a numeric representation of self.security_level from TS = 4 to U = 1
+        self.real = False
+        infile = open(filename, "r")
+        for line in infile:
+            line = line.split("\t")
+            for part in line:
+                if (line[0] == user):
+                    self.real = True
+                    if (line[2] == "~\n" or line[2] == "~"):
+                        self.classifications = []
+                    else:
+                        self.classifications = line[2].split(",")
+                        self.classifications[-1] = self.classifications[-1].strip() #remove newline from end of classfiications
+                    self.name = line[0]
+                    if (line[1] == "TS"):
+                        self.numeric_security_level = 4
+                    elif (line[1] == "S"):
+                        self.numeric_security_level = 3
+                    elif (line[1] == "C"):
+                        self.numeric_security_level = 2
+                    elif (line[1] == "U"):
+                        self.numeric_security_level = 1
+                    self.security_level = line[1]
+
+def dom_test(sender, receiver): #test to see if sender dominates receiver in MAC schema
+    if (sender.numeric_security_level >= receiver.numeric_security_level):
+        sender_set = set(sender.classifications)
+        receiver_set = set(receiver.classifications)
+        if (receiver_set.issubset(sender_set)):
+            return True
+    return False
+
+def handle_mac(file_name, action, user, mac_file_name):
+    user_mac = Mac_item(user, mac_file_name)
+    file_mac = Mac_item(file_name, mac_file_name)
+    if (file_mac.real == False):
+        return "Error {} not found".format(file_name)
+    else:
+        if (action == "r"):
+            test = dom_test(user_mac, file_mac)
+            if (test == True):
+                return "Read permission granted for {}".format(file_name)
+            else:
+                return "Error: insufficient permissions"
+        elif (action == "w"):
+            test = dom_test(file_mac, user_mac)
+            if (test == True):
+                return "Write permission granted for {}".format(file_name)
+            else:
+                return "Error: insufficient permissions"
+        else:
+            return "Invalid request"
+
 
 # A helper function. It may come in handy when performing symmetric encryption
 def pad_message(message):
@@ -101,7 +160,6 @@ def verify_hash(user, password):
         return False
     return False
 
-
 def main():
     # Set up network connection listener
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -151,9 +209,32 @@ def main():
                 #Encrypt response to client
                 ciphertext_response = encrypt_message(response, plaintext_key)
 
-
                 # Send encrypted response
                 send_message(connection, ciphertext_response)
+
+                if (valid == True):
+                    # Receive encrypted message from client (filename and r for read or w for write)
+                    ciphertext_message = receive_message(connection)
+                    ciphertext_message = ciphertext_message.decode()
+
+                    #Decrypt message from client (will be filename and r for read or w for write)
+                    decrypted_msg = decrypt_message(ciphertext_message, plaintext_key)
+
+                    #Split response from user into the username and password
+                    decrypted_msg = decrypted_msg.rstrip() #get rid of trailing spaces
+                    mac_vals = decrypted_msg.split(" ")
+                    file_name = mac_vals[0]
+                    action = mac_vals[1]
+                    
+                    mac_file_name = "mac_info.txt"
+                    return_msg = handle_mac(file_name, action, user, mac_file_name)
+                    
+                    #Encrypt response to client (do they have access?)
+                    ciphertext_response = encrypt_message(return_msg, plaintext_key)
+
+                    # Send encrypted response
+                    send_message(connection, ciphertext_response)
+                
             finally:
                 # Clean up the connection
                 connection.close()

@@ -1,0 +1,7 @@
+john	TS	A,B
+mike	U	~
+hans	S	A,C
+launch_codes	S	B
+lunch_codes	U	~
+sticker_collection	C	A
+bank_info	TS	A,B
